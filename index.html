@@ -3,165 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SILICON | ACCESS TERMINAL</title>
-    
-    <meta property="og:title" content="SILICON NETWORK TERMINAL">
-    <meta property="og:description" content="Initialize Handshake for Network Access.">
-    <meta property="og:image" content="https://i.ibb.co/YFm7m7z/image-2026-03-02-191524764-removebg-preview.png">
-    <meta name="theme-color" content="#ffffff">
-
+    <title>Silicon Terminal</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
-        :root { --main: #ffffff; --bg: #050505; --accent: #1a1a1a; --dim: #333; --glow: rgba(255,255,255,0.1); }
-        
-        /* CRT Scanline Overlay */
-        body::after {
-            content: " "; display: block; position: absolute; top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            z-index: 10; background-size: 100% 2px, 3px 100%; pointer-events: none;
-        }
-
         body { 
-            background-color: var(--bg); color: var(--main); font-family: 'Courier New', monospace; 
+            background: #0a0a0a; color: white; font-family: monospace; 
             display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; 
-            overflow: hidden; border: 15px solid #000; box-sizing: border-box;
         }
-
-        .screen-wrapper {
-            width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;
-            background: radial-gradient(circle, #111 0%, #050505 100%);
-            animation: flicker 0.15s infinite;
+        .container { 
+            width: 90%; max-width: 500px; padding: 40px; border: 1px solid #222; 
+            background: #000; text-align: center; border-radius: 8px;
         }
-
-        .terminal { 
-            width: 550px; padding: 60px; border: 1px solid var(--accent); background: rgba(0, 0, 0, 0.9); 
-            box-shadow: 0 0 50px rgba(0,0,0,1), inset 0 0 10px var(--glow); text-align: center; position: relative; z-index: 2;
-        }
-
-        .corner-tag { position: absolute; font-size: 10px; color: var(--dim); letter-spacing: 2px; text-transform: uppercase; }
-        .tl { top: -30px; left: 0; }
-        .br { bottom: -30px; right: 0; }
-
-        .logo-bg {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 350px; opacity: 0.1; z-index: -1; pointer-events: none; filter: grayscale(1);
-        }
-
-        h1 { font-size: 3.5rem; font-weight: 100; letter-spacing: 18px; margin: 0; text-transform: uppercase; text-shadow: 0 0 10px #fff; }
-        .sub-header { font-style: italic; font-size: 0.7rem; color: var(--dim); margin-bottom: 40px; letter-spacing: 4px; }
+        .logo { width: 80px; margin-bottom: 10px; opacity: 0.8; }
+        h1 { font-size: 2rem; letter-spacing: 5px; margin: 0; }
+        p { color: #555; font-size: 0.8rem; margin-bottom: 30px; }
         
-        .key-container { background: rgba(8, 8, 8, 0.8); border: 1px solid #111; padding: 25px; margin-bottom: 30px; min-height: 120px; }
-        .key-row { 
-            font-size: 0.85rem; margin: 15px 0; color: #fff; word-break: break-all; 
-            border-bottom: 1px solid #0f0f0f; padding-bottom: 8px; font-weight: bold; 
-            opacity: 0; animation: fadeIn 0.5s forwards; cursor: pointer; transition: 0.2s;
+        .box { background: #080808; border: 1px solid #111; padding: 20px; margin-bottom: 20px; border-radius: 5px; }
+        .key { 
+            font-size: 0.9rem; margin: 10px 0; padding: 10px; border-bottom: 1px solid #111;
+            cursor: pointer; transition: 0.2s; animation: fadeIn 0.5s ease forwards; opacity: 0;
         }
-        .key-row:hover { background: rgba(255,255,255,0.05); color: #aaa; }
+        .key:hover { background: #111; color: #fff; }
 
         button { 
-            background: transparent; border: 1px solid var(--main); color: var(--main); padding: 15px 45px; 
-            font-family: inherit; font-size: 0.8rem; letter-spacing: 6px; cursor: pointer; transition: 0.3s; text-transform: uppercase; 
-            outline: none;
+            background: white; border: none; color: black; padding: 12px 30px; 
+            font-weight: bold; cursor: pointer; border-radius: 4px; transition: 0.2s;
         }
-        button:hover:not(:disabled) { background: var(--main); color: #000; box-shadow: 0 0 20px #fff; }
-        button:disabled { border-color: #222; color: #222; cursor: not-allowed; }
+        button:hover:not(:disabled) { transform: scale(1.05); background: #eee; }
+        button:disabled { background: #222; color: #444; cursor: not-allowed; }
 
-        #cooldown { font-size: 0.7rem; color: #666; margin-top: 25px; height: 15px; letter-spacing: 2px; }
+        #timer { font-size: 0.7rem; color: #444; margin-top: 15px; }
 
-        @keyframes flicker { 0% { opacity: 0.98; } 50% { opacity: 1; } 100% { opacity: 0.99; } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
-<div class="screen-wrapper">
-    <img src="https://i.ibb.co/YFm7m7z/image-2026-03-02-191524764-removebg-preview.png" class="logo-bg">
-    <div class="terminal">
-        <div class="corner-tag tl">HANDSHAKE_PROT_V.4</div>
-        <div class="corner-tag br">SECURE_TERMINAL_0x99</div>
-        <h1>Silicon.</h1>
-        <div class="sub-header">NETWORK_ACCESS_TERMINAL</div>
-        <div class="key-container" id="output">
-            <div class="key-row" style="color:#222">[[ TERMINAL_IDLE ]]</div>
-            <div class="key-row" style="color:#222">[[ TERMINAL_IDLE ]]</div>
-            <div class="key-row" style="color:#222">[[ TERMINAL_IDLE ]]</div>
-        </div>
-        <button id="genBtn" onclick="initGeneration()">Initialize</button>
-        <div id="cooldown"></div>
+<div class="container">
+    <img src="https://i.ibb.co/1YQvpDfz/image.png" class="logo">
+    <h1>Silicon.</h1>
+    <p>Get your access key below</p>
+    
+    <div class="box" id="output">
+        <div style="color:#333">Ready to generate...</div>
     </div>
+
+    <button id="btn" onclick="go()">Generate Keys</button>
+    <div id="timer"></div>
 </div>
 
 <script>
-    const SECRET_PHRASE = "SILICON_HANDSHAKE_99_ALPHA"; 
+    const SECRET = "SILICON_HANDSHAKE_99_ALPHA";
 
-    function getRand(set, len) {
-        let res = "";
-        for(let i=0; i<len; i++) res += set.charAt(Math.floor(Math.random() * set.length));
-        return res;
+    function go() {
+        const keys = [make(), make(), make()];
+        const end = Date.now() + (6 * 60 * 60 * 1000);
+        localStorage.setItem('s_keys', JSON.stringify(keys));
+        localStorage.setItem('s_time', end);
+        show(keys);
+        start(end);
     }
 
-    function generateSecureC16() {
-        const timeWindow = Math.floor(Date.now() / (6 * 60 * 60 * 1000));
-        const hash = CryptoJS.HmacSHA256(timeWindow.toString(), SECRET_PHRASE).toString();
-        let digits = hash.replace(/\D/g, '');
-        return digits.padEnd(16, '0').substring(0, 16);
+    function make() {
+        const L = "ABCDEFGHIJKLMNOPQRSTUVWXYZ", N = "0123456789", S = "!@#$%^&*";
+        const r = (s, n) => Array.from({length:n}, () => s[Math.floor(Math.random()*s.length)]).join('');
+        
+        const win = Math.floor(Date.now() / (6 * 60 * 60 * 1000));
+        const hash = CryptoJS.HmacSHA256(win.toString(), SECRET).toString().replace(/\D/g, '').padEnd(16,'0').substring(0,16);
+        
+        return r(L,3) + r(S,3) + r(N,3) + r(L,1) + r(S,1) + r(N,1) + hash + r(L,3) + r(S,1);
     }
 
-    function createKey() {
-        const L = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        const N = "0123456789";
-        const S = "!@#$%^&*()_+-=[]{}|;:,.<>?";
-        return getRand(L,3) + getRand(S,3) + getRand(N,3) + getRand(L,1) + getRand(S,1) + getRand(N,1) + generateSecureC16() + getRand(L,3) + getRand(S,1);
-    }
-
-    function copyKey(text, element) {
-        navigator.clipboard.writeText(text);
-        const original = element.innerText;
-        element.innerText = "COPIED TO CLIPBOARD";
-        setTimeout(() => { element.innerText = original; }, 1000);
-    }
-
-    function render(keys) {
-        document.getElementById('output').innerHTML = keys.map((k, i) => 
-            `<div class="key-row" style="animation-delay: ${i * 0.2}s" onclick="copyKey('${k}', this)">${k}</div>`
+    function show(keys) {
+        document.getElementById('output').innerHTML = keys.map(k => 
+            `<div class="key" onclick="copy('${k}', this)">${k}</div>`
         ).join('');
     }
 
-    function initGeneration() {
-        const keys = [createKey(), createKey(), createKey()];
-        const expiry = Date.now() + (6 * 60 * 60 * 1000);
-        localStorage.setItem('silicon_keys', JSON.stringify(keys));
-        localStorage.setItem('silicon_cooldown', expiry);
-        render(keys);
-        startTimer(expiry);
+    function copy(txt, el) {
+        navigator.clipboard.writeText(txt);
+        const old = el.innerText;
+        el.innerText = "COPIED!";
+        setTimeout(() => el.innerText = old, 800);
     }
 
-    function startTimer(expiry) {
-        const btn = document.getElementById('genBtn');
-        const cd = document.getElementById('cooldown');
-        btn.disabled = true;
-        const timer = setInterval(() => {
-            const diff = expiry - Date.now();
-            if (diff <= 0) {
-                clearInterval(timer);
-                btn.disabled = false;
-                cd.innerText = "";
-                return;
-            }
-            const h = Math.floor(diff / 3600000);
-            const m = Math.floor((diff % 3600000) / 60000);
-            const s = Math.floor((diff % 60000) / 1000);
-            cd.innerText = `RE-LOCK: ${h}h ${m}m ${s}s`;
+    function start(end) {
+        const b = document.getElementById('btn'), t = document.getElementById('timer');
+        b.disabled = true;
+        const i = setInterval(() => {
+            const d = end - Date.now();
+            if (d <= 0) { clearInterval(i); b.disabled = false; t.innerText = ""; return; }
+            const h = Math.floor(d/3600000), m = Math.floor((d%3600000)/60000), s = Math.floor((d%60000)/1000);
+            t.innerText = `Next generation available in: ${h}h ${m}m ${s}s`;
         }, 1000);
     }
 
     window.onload = () => {
-        const saved = localStorage.getItem('silicon_keys');
-        const exp = localStorage.getItem('silicon_cooldown');
-        if (saved && exp && Date.now() < parseInt(exp)) {
-            render(JSON.parse(saved));
-            startTimer(parseInt(exp));
-        }
+        const k = localStorage.getItem('s_keys'), e = localStorage.getItem('s_time');
+        if(k && e && Date.now() < e) { show(JSON.parse(k)); start(parseInt(e)); }
     };
 </script>
 </body>
