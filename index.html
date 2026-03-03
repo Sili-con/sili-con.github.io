@@ -4,37 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Silicon Terminal</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
         body { 
-            background: #0a0a0a; color: white; font-family: monospace; 
+            background: #0a0a0a; color: white; font-family: 'Segoe UI', sans-serif; 
             display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; 
         }
         .container { 
-            width: 90%; max-width: 500px; padding: 40px; border: 1px solid #222; 
-            background: #000; text-align: center; border-radius: 8px;
+            width: 90%; max-width: 450px; padding: 40px; border: 1px solid #1a1a1a; 
+            background: #000; text-align: center; border-radius: 12px;
         }
-        .logo { width: 80px; margin-bottom: 10px; opacity: 0.8; }
-        h1 { font-size: 2rem; letter-spacing: 5px; margin: 0; }
-        p { color: #555; font-size: 0.8rem; margin-bottom: 30px; }
+        .logo { width: 120px; margin-bottom: 20px; }
+        h1 { font-size: 1.8rem; letter-spacing: 4px; margin: 0; text-transform: uppercase; }
+        p { color: #666; font-size: 0.9rem; margin-bottom: 30px; }
         
-        .box { background: #080808; border: 1px solid #111; padding: 20px; margin-bottom: 20px; border-radius: 5px; }
+        .box { background: #050505; border: 1px solid #111; padding: 15px; margin-bottom: 25px; border-radius: 8px; min-height: 100px; }
         .key { 
-            font-size: 0.9rem; margin: 10px 0; padding: 10px; border-bottom: 1px solid #111;
-            cursor: pointer; transition: 0.2s; animation: fadeIn 0.5s ease forwards; opacity: 0;
+            font-family: monospace; font-size: 0.85rem; margin: 10px 0; padding: 12px; 
+            border-bottom: 1px solid #111; color: #aaa; cursor: pointer; transition: 0.2s; 
+            animation: fadeIn 0.4s ease forwards; opacity: 0;
         }
         .key:hover { background: #111; color: #fff; }
 
         button { 
-            background: white; border: none; color: black; padding: 12px 30px; 
-            font-weight: bold; cursor: pointer; border-radius: 4px; transition: 0.2s;
+            background: #fff; border: none; color: #000; padding: 14px 40px; 
+            font-weight: bold; cursor: pointer; border-radius: 6px; transition: 0.2s;
         }
-        button:hover:not(:disabled) { transform: scale(1.05); background: #eee; }
-        button:disabled { background: #222; color: #444; cursor: not-allowed; }
+        button:hover:not(:disabled) { background: #ccc; }
+        button:disabled { background: #1a1a1a; color: #444; cursor: not-allowed; }
 
-        #timer { font-size: 0.7rem; color: #444; margin-top: 15px; }
+        #timer { font-size: 0.75rem; color: #444; margin-top: 20px; }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -42,41 +42,63 @@
 <div class="container">
     <img src="https://i.ibb.co/1YQvpDfz/image.png" class="logo">
     <h1>Silicon.</h1>
-    <p>Get your access key below</p>
+    <p>Handshake Protocol v4.0</p>
     
     <div class="box" id="output">
-        <div style="color:#333">Ready to generate...</div>
+        <div style="color:#222; padding-top: 35px;">System Idle...</div>
     </div>
 
-    <button id="btn" onclick="go()">Generate Keys</button>
+    <button id="btn" onclick="go()">Generate Access Keys</button>
     <div id="timer"></div>
 </div>
 
 <script>
     const SECRET = "SILICON_HANDSHAKE_99_ALPHA";
 
-    function go() {
-        const keys = [make(), make(), make()];
+    // Native browser crypto (HMAC-SHA256)
+    async function getC16() {
+        const timeWindow = Math.floor(Date.now() / (6 * 60 * 60 * 1000)).toString();
+        const encoder = new TextEncoder();
+        const keyData = encoder.encode(SECRET);
+        const msgData = encoder.encode(timeWindow);
+
+        const cryptoKey = await crypto.subtle.importKey(
+            "raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+        );
+        
+        const signature = await crypto.subtle.sign("HMAC", cryptoKey, msgData);
+        const hashArray = Array.from(new Uint8Array(signature));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        // Clean to digits only, pad to 16, trim
+        return hashHex.replace(/\D/g, '').padEnd(16, '0').substring(0, 16);
+    }
+
+    function r(set, len) {
+        let res = "";
+        for(let i=0; i<len; i++) res += set.charAt(Math.floor(Math.random() * set.length));
+        return res;
+    }
+
+    async function go() {
+        const L = "ABCDEFGHIJKLMNOPQRSTUVWXYZ", N = "0123456789", S = "!@#$%^&*";
+        const c16 = await getC16();
+        
+        const makeKey = () => r(L,3) + r(S,3) + r(N,3) + r(L,1) + r(S,1) + r(N,1) + c16 + r(L,3) + r(S,1);
+        
+        const keys = [makeKey(), makeKey(), makeKey()];
         const end = Date.now() + (6 * 60 * 60 * 1000);
+        
         localStorage.setItem('s_keys', JSON.stringify(keys));
         localStorage.setItem('s_time', end);
+        
         show(keys);
         start(end);
     }
 
-    function make() {
-        const L = "ABCDEFGHIJKLMNOPQRSTUVWXYZ", N = "0123456789", S = "!@#$%^&*";
-        const r = (s, n) => Array.from({length:n}, () => s[Math.floor(Math.random()*s.length)]).join('');
-        
-        const win = Math.floor(Date.now() / (6 * 60 * 60 * 1000));
-        const hash = CryptoJS.HmacSHA256(win.toString(), SECRET).toString().replace(/\D/g, '').padEnd(16,'0').substring(0,16);
-        
-        return r(L,3) + r(S,3) + r(N,3) + r(L,1) + r(S,1) + r(N,1) + hash + r(L,3) + r(S,1);
-    }
-
     function show(keys) {
-        document.getElementById('output').innerHTML = keys.map(k => 
-            `<div class="key" onclick="copy('${k}', this)">${k}</div>`
+        document.getElementById('output').innerHTML = keys.map((k, i) => 
+            `<div class="key" style="animation-delay: ${i*0.1}s" onclick="copy('${k}', this)">${k}</div>`
         ).join('');
     }
 
@@ -84,7 +106,7 @@
         navigator.clipboard.writeText(txt);
         const old = el.innerText;
         el.innerText = "COPIED!";
-        setTimeout(() => el.innerText = old, 800);
+        setTimeout(() => { el.innerText = old; }, 800);
     }
 
     function start(end) {
@@ -94,13 +116,16 @@
             const d = end - Date.now();
             if (d <= 0) { clearInterval(i); b.disabled = false; t.innerText = ""; return; }
             const h = Math.floor(d/3600000), m = Math.floor((d%3600000)/60000), s = Math.floor((d%60000)/1000);
-            t.innerText = `Next generation available in: ${h}h ${m}m ${s}s`;
+            t.innerText = `NEXT RESET: ${h}h ${m}m ${s}s`;
         }, 1000);
     }
 
     window.onload = () => {
         const k = localStorage.getItem('s_keys'), e = localStorage.getItem('s_time');
-        if(k && e && Date.now() < e) { show(JSON.parse(k)); start(parseInt(e)); }
+        if(k && e && Date.now() < e) { 
+            show(JSON.parse(k)); 
+            start(parseInt(e)); 
+        }
     };
 </script>
 </body>
